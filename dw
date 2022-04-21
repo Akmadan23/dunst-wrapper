@@ -1,0 +1,40 @@
+#!/bin/sh
+
+"$@" &> /dev/null
+
+case $1 in
+    amixer)
+        # Query amixer for the current volume and whether or not the speaker is muted
+        value="$(amixer get Master | tail -1 | awk '{print $5}' | sed 's/[^0-9]*//g')"
+        mute="$(amixer get Master | tail -1 | awk '{print $6}' | sed 's/[^a-z]*//g')"
+
+        if [[ "$mute" == "off" ]]; then
+            icon="audio-volume-muted-symbolic.symbolic"
+            text="Audio muted"
+        else
+            text="Volume: $value%"
+
+            # Setting correct icon based on volume level
+            case $value in
+                [0-9] | [1-2][0-9]) icon="audio-volume-low-symbolic.symbolic"    ;; #1-29
+                [3-6][0-9])         icon="audio-volume-medium-symbolic.symbolic" ;; #30-79
+                [7-9][0-9] | 100)   icon="audio-volume-high-symbolic.symbolic"   ;; #80-100
+            esac
+        fi
+        ;;
+
+    xbacklight)
+        value="$(xbacklight -get | cut -d '.' -f 1)"
+        icon="display-brightness-symbolic.symbolic"
+        text="Brightness: $value%"
+        ;;
+
+    *)
+        icon="dialog-warning-symbolic.symbolic"
+        text="Error!"
+        value=100
+        ;;
+esac
+
+# Running the notification
+dunstify -h int:value:$value -h string:x-dunst-stack-tag:$1 -i "$icon" "$text"
